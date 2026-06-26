@@ -322,6 +322,8 @@ svg {
   display: grid;
   gap: 7px;
   z-index: 20;
+  transform-origin: top right;
+  will-change: transform, opacity;
 }
 
 .favorite-tabs {
@@ -349,6 +351,7 @@ svg {
   gap: 9px;
   align-items: start;
   text-align: left;
+  transform-origin: center;
 }
 
 .history-item.compact {
@@ -376,6 +379,7 @@ svg {
   place-items: center;
   color: #fff;
   background: var(--teal);
+  transform-origin: center;
 }
 
 .history-item.compact .type-icon {
@@ -521,6 +525,8 @@ svg {
   display: grid;
   gap: 4px;
   z-index: 10;
+  transform-origin: top right;
+  will-change: transform, opacity;
 }
 
 .action-popover button {
@@ -549,6 +555,7 @@ svg {
   border-radius: 8px;
   background: #fbfefd;
   overflow: hidden;
+  will-change: transform, opacity;
 }
 
 .text-preview {
@@ -658,7 +665,6 @@ svg {
   position: fixed;
   left: 50%;
   bottom: 18px;
-  transform: translateX(-50%);
   max-width: min(520px, calc(100vw - 32px));
   padding: 9px 12px;
   border: 1px solid var(--line-strong);
@@ -669,6 +675,7 @@ svg {
   font-size: 12px;
   font-weight: 800;
   z-index: 50;
+  will-change: transform, opacity;
 }
 
 .dock-runtime {
@@ -687,6 +694,12 @@ svg {
   overflow: hidden;
   display: grid;
   grid-template-rows: auto auto 1fr auto;
+  transform-origin: center right;
+  will-change: transform, opacity;
+}
+
+.dock-runtime.left .dock-runtime-panel {
+  transform-origin: center left;
 }
 
 .dock-runtime.left .dock-runtime-panel,
@@ -712,6 +725,12 @@ svg {
   display: grid;
   place-content: center;
   gap: 7px;
+  transform-origin: center right;
+  will-change: transform, opacity;
+}
+
+.dock-runtime.left .dock-rail-handle {
+  transform-origin: center left;
 }
 
 .dock-rail-handle span {
@@ -806,6 +825,7 @@ svg {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  will-change: transform, opacity;
 }
 
 @media (max-width: 760px) {

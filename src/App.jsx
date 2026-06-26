@@ -1,6 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+
+gsap.registerPlugin(useGSAP)
+gsap.defaults({ duration: 0.22, ease: 'power2.out' })
 
 const isSidebarWindow = new URLSearchParams(window.location.search).get('view') === 'sidebar'
+
+function prefersReducedMotion () {
+  return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)
+}
 
 const fallbackItems = [
   {
@@ -169,6 +178,33 @@ function typeName (type) {
   return { text: '文本', image: '图片', file: '文件', code: '代码' }[type] || type
 }
 
+function pulseHistoryTarget (target) {
+  if (!target || prefersReducedMotion()) return
+  const icon = target.querySelector('.type-icon')
+  const tl = gsap.timeline({
+    defaults: {
+      duration: 0.18,
+      ease: 'power2.out',
+      overwrite: 'auto'
+    }
+  })
+
+  tl.fromTo(
+    target,
+    { scale: 0.992, willChange: 'transform' },
+    { scale: 1, clearProps: 'transform,willChange' }
+  )
+
+  if (icon) {
+    tl.fromTo(
+      icon,
+      { scale: 0.88 },
+      { scale: 1, duration: 0.22, ease: 'back.out(1.7)', clearProps: 'transform' },
+      '<'
+    )
+  }
+}
+
 function formatRelativeTime (time) {
   const diff = Math.max(0, Date.now() - Number(time || Date.now()))
   if (diff < 60 * 1000) return '刚刚'
@@ -297,6 +333,111 @@ function useFilteredItems (items, filter, favoriteGroup, query) {
   }, [items, filter, favoriteGroup, query])
 }
 
+function AnimatedPopover ({ open, className, children, origin = 'top right' }) {
+  const popoverRef = useRef(null)
+  const [rendered, setRendered] = useState(open)
+
+  useEffect(() => {
+    if (open) setRendered(true)
+  }, [open])
+
+  useGSAP(() => {
+    const node = popoverRef.current
+    if (!node) return
+
+    const reduced = prefersReducedMotion()
+    gsap.killTweensOf(node)
+
+    if (open) {
+      gsap.fromTo(
+        node,
+        {
+          autoAlpha: 0,
+          y: reduced ? 0 : -6,
+          scale: reduced ? 1 : 0.98,
+          transformOrigin: origin,
+          willChange: 'transform, opacity'
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: reduced ? 0 : 0.16,
+          ease: 'power2.out',
+          clearProps: 'willChange'
+        }
+      )
+      return
+    }
+
+    gsap.to(node, {
+      autoAlpha: 0,
+      y: reduced ? 0 : -4,
+      scale: reduced ? 1 : 0.98,
+      duration: reduced ? 0 : 0.12,
+      ease: 'power1.in',
+      onComplete: () => setRendered(false)
+    })
+  }, { dependencies: [open, rendered], scope: popoverRef })
+
+  if (!rendered) return null
+  return <div ref={popoverRef} className={className}>{children}</div>
+}
+
+function AnimatedStatus ({ message, className = '' }) {
+  const statusRef = useRef(null)
+  const [renderedMessage, setRenderedMessage] = useState(message)
+  const centered = className.includes('toast')
+
+  useEffect(() => {
+    if (message) setRenderedMessage(message)
+  }, [message])
+
+  useGSAP(() => {
+    const node = statusRef.current
+    if (!node) return
+
+    const reduced = prefersReducedMotion()
+    gsap.killTweensOf(node)
+
+    if (message) {
+      gsap.fromTo(
+        node,
+        {
+          autoAlpha: 0,
+          xPercent: centered ? -50 : 0,
+          y: reduced ? 0 : 10,
+          scale: reduced ? 1 : 0.98,
+          willChange: 'transform, opacity'
+        },
+        {
+          autoAlpha: 1,
+          xPercent: centered ? -50 : 0,
+          y: 0,
+          scale: 1,
+          duration: reduced ? 0 : 0.2,
+          ease: 'power2.out',
+          clearProps: 'willChange'
+        }
+      )
+      return
+    }
+
+    gsap.to(node, {
+      autoAlpha: 0,
+      xPercent: centered ? -50 : 0,
+      y: reduced ? 0 : 8,
+      scale: reduced ? 1 : 0.98,
+      duration: reduced ? 0 : 0.16,
+      ease: 'power1.in',
+      onComplete: () => setRenderedMessage('')
+    })
+  }, { dependencies: [message, renderedMessage, centered], scope: statusRef })
+
+  if (!renderedMessage) return null
+  return <div ref={statusRef} className={className}>{renderedMessage}</div>
+}
+
 function HistoryItem ({ item, active, compact, onClick, onDoubleClick }) {
   return (
     <button className={`history-item ${compact ? 'compact' : ''} ${active ? 'active' : ''}`} onClick={onClick} onDoubleClick={onDoubleClick}>
@@ -350,6 +491,9 @@ function Preview ({ item }) {
 }
 
 function MainApp ({ store }) {
+  const shellRef = useRef(null)
+  const historyListRef = useRef(null)
+  const previewRef = useRef(null)
   const [filter, setFilter] = useState('all')
   const [favoriteGroup, setFavoriteGroup] = useState('全部')
   const [query, setQuery] = useState('')
@@ -364,6 +508,7 @@ function MainApp ({ store }) {
   const selected = store.selected
   const favoriteTabs = ['全部', ...store.groups]
   const favoriteCount = store.items.filter(item => item.favorite).length
+  const visibleKey = visible.map(item => item.id).join('|')
 
   useEffect(() => {
     if (!visible.some(item => item.id === store.selectedId)) {
@@ -384,6 +529,103 @@ function MainApp ({ store }) {
   useEffect(() => {
     if (filter !== 'favorite') setFavoriteMenuOpen(false)
   }, [filter])
+
+  useGSAP(() => {
+    const reduced = prefersReducedMotion()
+    const tl = gsap.timeline({
+      defaults: {
+        duration: reduced ? 0 : 0.24,
+        ease: 'power2.out'
+      }
+    })
+
+    tl.fromTo(
+      '.topbar',
+      { autoAlpha: 0, y: reduced ? 0 : -8 },
+      { autoAlpha: 1, y: 0 }
+    )
+      .fromTo(
+        '.filter-panel',
+        { autoAlpha: 0, x: reduced ? 0 : -8 },
+        { autoAlpha: 1, x: 0 },
+        '<0.05'
+      )
+      .fromTo(
+        '.preview-header, .preview-card, .properties',
+        { autoAlpha: 0, y: reduced ? 0 : 8 },
+        { autoAlpha: 1, y: 0, stagger: 0.04 },
+        '<0.04'
+      )
+  }, { scope: shellRef })
+
+  useGSAP(() => {
+    const list = historyListRef.current
+    if (!list) return
+
+    const reduced = prefersReducedMotion()
+    const items = Array.from(list.querySelectorAll('.history-item')).slice(0, 18)
+    const empty = list.querySelector('.status-card')
+    const targets = items.length ? items : empty ? [empty] : []
+    if (!targets.length) return
+
+    gsap.fromTo(
+      targets,
+      {
+        autoAlpha: 0,
+        y: reduced ? 0 : 8,
+        willChange: 'transform, opacity'
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: reduced ? 0 : 0.2,
+        stagger: reduced ? 0 : 0.025,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity,visibility,willChange'
+      }
+    )
+  }, { dependencies: [visibleKey], scope: historyListRef, revertOnUpdate: true })
+
+  useGSAP(() => {
+    const panel = previewRef.current
+    if (!panel) return
+
+    const reduced = prefersReducedMotion()
+    const targets = [
+      panel.querySelector('.preview-header h1'),
+      ...panel.querySelectorAll('.preview-meta span'),
+      panel.querySelector('.preview-card'),
+      ...panel.querySelectorAll('.property')
+    ].filter(Boolean)
+    if (!targets.length) return
+
+    gsap.fromTo(
+      targets,
+      {
+        autoAlpha: 0,
+        y: reduced ? 0 : 6,
+        willChange: 'transform, opacity'
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: reduced ? 0 : 0.2,
+        stagger: reduced ? 0 : 0.025,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity,visibility,willChange'
+      }
+    )
+  }, { dependencies: [selected?.id, selected?.favorite, selected?.favoriteGroup], scope: previewRef, revertOnUpdate: true })
+
+  useGSAP(() => {
+    if (filter !== 'favorite') return
+    const reduced = prefersReducedMotion()
+    gsap.fromTo(
+      '.favorite-panel',
+      { autoAlpha: 0, y: reduced ? 0 : -6 },
+      { autoAlpha: 1, y: 0, duration: reduced ? 0 : 0.18, ease: 'power2.out' }
+    )
+  }, { dependencies: [filter], scope: shellRef, revertOnUpdate: true })
 
   const copyItem = (item = selected) => {
     if (!item) return
@@ -427,7 +669,7 @@ function MainApp ({ store }) {
   }
 
   return (
-    <main className='app-shell'>
+    <main className='app-shell' ref={shellRef}>
       <header className='topbar'>
         <div className='brand'>
           <div className='logo'><Icon name='clipboard' /></div>
@@ -476,49 +718,47 @@ function MainApp ({ store }) {
                     <button className='favorite-more' type='button' onClick={() => setFavoriteMenuOpen(!favoriteMenuOpen)} title='管理收藏分类'>
                       <Icon name='more' size={15} />
                     </button>
-                    {favoriteMenuOpen && (
-                      <div className='favorite-popover'>
-                        <div className='favorite-row'>
-                          <input
-                            value={renameValue}
-                            disabled={!store.groups.includes(favoriteGroup)}
-                            onChange={event => setRenameValue(event.target.value)}
-                            placeholder='重命名当前分类'
-                          />
-                          <button
-                            type='button'
-                            disabled={!store.groups.includes(favoriteGroup)}
-                            onClick={() => {
-                              store.renameGroup(favoriteGroup, renameValue.trim())
-                              setFavoriteMenuOpen(false)
-                            }}
-                          >改名
-                          </button>
-                          <button
-                            type='button' className='danger' disabled={!store.groups.includes(favoriteGroup)} onClick={() => {
-                              store.deleteGroup(favoriteGroup)
-                              setFavoriteGroup('全部')
-                              setFavoriteMenuOpen(false)
-                            }}
-                          >删除
-                          </button>
-                        </div>
-                        <div className='favorite-row compact'>
-                          <select value={moveGroup} onChange={event => setMoveGroup(event.target.value)} disabled={!selected?.favorite}>
-                            {store.groups.map(group => <option key={group} value={group}>{group}</option>)}
-                          </select>
-                          <button
-                            type='button'
-                            disabled={!selected?.favorite}
-                            onClick={() => {
-                              if (selected) store.updateItem(selected.id, { favoriteGroup: moveGroup })
-                              setFavoriteMenuOpen(false)
-                            }}
-                          >移动
-                          </button>
-                        </div>
+                    <AnimatedPopover open={favoriteMenuOpen} className='favorite-popover'>
+                      <div className='favorite-row'>
+                        <input
+                          value={renameValue}
+                          disabled={!store.groups.includes(favoriteGroup)}
+                          onChange={event => setRenameValue(event.target.value)}
+                          placeholder='重命名当前分类'
+                        />
+                        <button
+                          type='button'
+                          disabled={!store.groups.includes(favoriteGroup)}
+                          onClick={() => {
+                            store.renameGroup(favoriteGroup, renameValue.trim())
+                            setFavoriteMenuOpen(false)
+                          }}
+                        >改名
+                        </button>
+                        <button
+                          type='button' className='danger' disabled={!store.groups.includes(favoriteGroup)} onClick={() => {
+                            store.deleteGroup(favoriteGroup)
+                            setFavoriteGroup('全部')
+                            setFavoriteMenuOpen(false)
+                          }}
+                        >删除
+                        </button>
                       </div>
-                    )}
+                      <div className='favorite-row compact'>
+                        <select value={moveGroup} onChange={event => setMoveGroup(event.target.value)} disabled={!selected?.favorite}>
+                          {store.groups.map(group => <option key={group} value={group}>{group}</option>)}
+                        </select>
+                        <button
+                          type='button'
+                          disabled={!selected?.favorite}
+                          onClick={() => {
+                            if (selected) store.updateItem(selected.id, { favoriteGroup: moveGroup })
+                            setFavoriteMenuOpen(false)
+                          }}
+                        >移动
+                        </button>
+                      </div>
+                    </AnimatedPopover>
                   </div>
                 </div>
                 <div className='favorite-tabs'>
@@ -538,21 +778,24 @@ function MainApp ({ store }) {
             )}
           </div>
 
-          <div className='history-list'>
+          <div className='history-list' ref={historyListRef}>
             {visible.map(item => (
               <HistoryItem
                 key={item.id}
                 item={item}
                 active={item.id === store.selectedId}
                 onClick={() => store.setSelectedId(item.id)}
-                onDoubleClick={() => copyItem(item)}
+                onDoubleClick={event => {
+                  pulseHistoryTarget(event.currentTarget)
+                  copyItem(item)
+                }}
               />
             ))}
             {!visible.length && <div className='status-card'>没有匹配的剪贴板记录。</div>}
           </div>
         </aside>
 
-        <section className='right-pane'>
+        <section className='right-pane' ref={previewRef}>
           <div className='preview-header'>
             <div>
               <h1>{selected?.title || '没有选中的记录'}</h1>
@@ -568,12 +811,17 @@ function MainApp ({ store }) {
             <div className='preview-actions'>
               <div className='action-menu'>
                 <button className='action-btn icon-btn' onClick={() => setMenuOpen(!menuOpen)}><Icon name='more' size={15} /></button>
-                {menuOpen && (
-                  <div className='action-popover'>
-                    <button onClick={toggleFavorite}>{selected?.favorite ? '取消收藏' : '收藏'}</button>
-                    <button className='danger' onClick={() => selected && store.removeItem(selected.id)}>删除</button>
-                  </div>
-                )}
+                <AnimatedPopover open={menuOpen} className='action-popover'>
+                  <button onClick={toggleFavorite}>{selected?.favorite ? '取消收藏' : '收藏'}</button>
+                  <button
+                    className='danger'
+                    onClick={() => {
+                      if (selected) store.removeItem(selected.id)
+                      setMenuOpen(false)
+                    }}
+                  >删除
+                  </button>
+                </AnimatedPopover>
               </div>
             </div>
           </div>
@@ -593,12 +841,14 @@ function MainApp ({ store }) {
           </div>
         </section>
       </div>
-      {store.status && <div className='toast'>{store.status}</div>}
+      <AnimatedStatus message={store.status} className='toast' />
     </main>
   )
 }
 
 function SidebarApp ({ store }) {
+  const dockRef = useRef(null)
+  const sidebarItemsRef = useRef(null)
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [dockState, setDockState] = useState(() => window.services?.dock?.getState?.() || { mode: 'rail', side: 'right', pinned: false })
@@ -608,6 +858,7 @@ function SidebarApp ({ store }) {
   const collapsed = dockState.mode === 'rail'
   const floating = dockState.mode === 'floating'
   const side = dockState.side === 'right' ? 'right' : 'left'
+  const visibleKey = visible.map(item => item.id).join('|')
 
   useEffect(() => {
     return window.services?.dock?.onState?.(setDockState)
@@ -618,6 +869,98 @@ function SidebarApp ({ store }) {
       store.setSelectedId(visible[0]?.id || null)
     }
   }, [visible, store.selectedId])
+
+  useGSAP(() => {
+    const root = dockRef.current
+    if (!root) return
+
+    const reduced = prefersReducedMotion()
+    const direction = side === 'right' ? 1 : -1
+
+    if (collapsed) {
+      const handle = root.querySelector('.dock-rail-handle')
+      if (!handle) return
+      gsap.fromTo(
+        handle,
+        {
+          autoAlpha: 0,
+          x: reduced ? 0 : 10 * direction,
+          scaleX: reduced ? 1 : 0.92,
+          transformOrigin: side === 'right' ? 'right center' : 'left center',
+          willChange: 'transform, opacity'
+        },
+        {
+          autoAlpha: 1,
+          x: 0,
+          scaleX: 1,
+          duration: reduced ? 0 : 0.18,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity,visibility,willChange'
+        }
+      )
+      return
+    }
+
+    const panel = root.querySelector('.dock-runtime-panel')
+    if (!panel) return
+
+    const tl = gsap.timeline({
+      defaults: {
+        duration: reduced ? 0 : 0.2,
+        ease: 'power2.out'
+      }
+    })
+
+    tl.fromTo(
+      panel,
+      {
+        autoAlpha: 0,
+        x: floating || reduced ? 0 : 14 * direction,
+        scale: floating && !reduced ? 0.985 : 1,
+        willChange: 'transform, opacity'
+      },
+      {
+        autoAlpha: 1,
+        x: 0,
+        scale: 1,
+        clearProps: 'transform,opacity,visibility,willChange'
+      }
+    )
+      .fromTo(
+        panel.querySelectorAll('.grabbar, .sidebar-search'),
+        { autoAlpha: 0, y: reduced ? 0 : -6 },
+        { autoAlpha: 1, y: 0, stagger: reduced ? 0 : 0.035 },
+        '<0.04'
+      )
+  }, { dependencies: [collapsed, floating, side], scope: dockRef, revertOnUpdate: true })
+
+  useGSAP(() => {
+    const list = sidebarItemsRef.current
+    if (!list || collapsed) return
+
+    const reduced = prefersReducedMotion()
+    const items = Array.from(list.querySelectorAll('.history-item')).slice(0, 14)
+    const empty = list.querySelector('.status-card')
+    const targets = items.length ? items : empty ? [empty] : []
+    if (!targets.length) return
+
+    gsap.fromTo(
+      targets,
+      {
+        autoAlpha: 0,
+        y: reduced ? 0 : 7,
+        willChange: 'transform, opacity'
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: reduced ? 0 : 0.18,
+        stagger: reduced ? 0 : 0.022,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity,visibility,willChange'
+      }
+    )
+  }, { dependencies: [visibleKey, collapsed], scope: sidebarItemsRef, revertOnUpdate: true })
 
   const copyItem = (item = selected) => {
     if (!item) return
@@ -679,6 +1022,7 @@ function SidebarApp ({ store }) {
   return (
     <main
       className={`dock-runtime ${side} ${collapsed ? 'collapsed' : ''} ${floating ? 'floating' : ''}`}
+      ref={dockRef}
       onMouseEnter={expandFromRail}
       onMouseLeave={collapseIfNeeded}
     >
@@ -730,7 +1074,7 @@ function SidebarApp ({ store }) {
                 ))}
               </div>
             </div>
-            <div className='sidebar-items'>
+            <div className='sidebar-items' ref={sidebarItemsRef}>
               {visible.map(item => (
                 <HistoryItem
                   key={item.id}
@@ -738,12 +1082,15 @@ function SidebarApp ({ store }) {
                   compact
                   active={item.id === store.selectedId}
                   onClick={() => store.setSelectedId(item.id)}
-                  onDoubleClick={() => copyItem(item)}
+                  onDoubleClick={event => {
+                    pulseHistoryTarget(event.currentTarget)
+                    copyItem(item)
+                  }}
                 />
               ))}
               {!visible.length && <div className='status-card'>没有匹配的剪贴板记录。</div>}
             </div>
-            {store.status && <div className='dock-status'>{store.status}</div>}
+            <AnimatedStatus message={store.status} className='dock-status' />
           </aside>
           )}
     </main>
