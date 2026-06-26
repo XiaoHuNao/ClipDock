@@ -432,7 +432,7 @@ function MainApp ({ store }) {
         <div className='brand'>
           <div className='logo'><Icon name='clipboard' /></div>
           <div>
-            <div className='brand-title'>剪贴板管理器</div>
+            <div className='brand-title'>ClipDock</div>
             <div className='brand-sub'>uTools 插件</div>
           </div>
         </div>

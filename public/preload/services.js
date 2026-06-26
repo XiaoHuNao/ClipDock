@@ -854,7 +854,7 @@ window.services = {
           message: `正在吸附到屏幕${sidebarDockState.side === 'right' ? '右侧' : '左侧'}，悬浮窄条展开。`
         }
       } catch (error) {
-        console.error('[clipboard-manager] openSidebar failed', error)
+        console.error('[clipdock] openSidebar failed', error)
         return {
           ok: false,
           open: false,

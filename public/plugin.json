@@ -12,9 +12,9 @@
   },
   "features": [
     {
-      "code": "clipboard-manager",
-      "explain": "剪贴板历史管理",
-      "cmds": ["剪贴板", "剪贴板历史", "clipboard", "cb"]
+      "code": "clipdock",
+      "explain": "ClipDock 剪贴板历史管理",
+      "cmds": ["ClipDock", "clipdock", "剪贴板", "剪贴板历史", "clipboard", "cb"]
     },
     {
       "code": "clipboard-capture-text",

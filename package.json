@@ -1,8 +1,8 @@
 {
-  "name": "utools-clipboard-manager",
+  "name": "utools-clipdock",
   "version": "0.1.0",
   "private": true,
-  "description": "uTools 剪贴板历史管理插件",
+  "description": "ClipDock: uTools clipboard history manager with dockable sidebar",
   "type": "module",
   "scripts": {
     "dev": "vite",
