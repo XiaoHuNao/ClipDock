@@ -1,0 +1,41 @@
+{
+  "$schema": "../node_modules/utools-api-types/resource/utools.schema.json",
+  "main": "index.html",
+  "preload": "preload/services.js",
+  "logo": "logo.png",
+  "development": {
+    "main": "http://localhost:5173"
+  },
+  "pluginSetting": {
+    "single": true,
+    "height": 680
+  },
+  "features": [
+    {
+      "code": "clipboard-manager",
+      "explain": "剪贴板历史管理",
+      "cmds": ["剪贴板", "剪贴板历史", "clipboard", "cb"]
+    },
+    {
+      "code": "clipboard-capture-text",
+      "explain": "保存选中文本到剪贴板历史",
+      "cmds": [
+        { "type": "over", "label": "保存到剪贴板历史" }
+      ]
+    },
+    {
+      "code": "clipboard-capture-image",
+      "explain": "保存图片到剪贴板历史",
+      "cmds": [
+        { "type": "img", "label": "保存图片到剪贴板历史" }
+      ]
+    },
+    {
+      "code": "clipboard-capture-files",
+      "explain": "保存文件到剪贴板历史",
+      "cmds": [
+        { "type": "files", "label": "保存文件到剪贴板历史", "maxLength": 20 }
+      ]
+    }
+  ]
+}
