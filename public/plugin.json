@@ -4,7 +4,7 @@
   "preload": "preload/services.js",
   "logo": "logo.png",
   "development": {
-    "main": "http://localhost:5173"
+    "main": "http://127.0.0.1:5173"
   },
   "pluginSetting": {
     "single": true,
@@ -14,7 +14,7 @@
     {
       "code": "clipdock",
       "explain": "ClipDock 剪贴板历史管理",
-      "cmds": ["ClipDock", "clipdock", "剪贴板", "剪贴板历史", "clipboard", "cb"]
+      "cmds": ["ClipDock", "clipdock", "剪贴板", "剪贴板历史", "clipboard"]
     },
     {
       "code": "clipboard-capture-text",
